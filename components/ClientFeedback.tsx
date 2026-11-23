@@ -120,7 +120,26 @@ export default function ClientFeedback() {
   }, []);
 
   const activeIndex = ((globalIndex % testimonials.length) + testimonials.length) % testimonials.length;
+  const nextIndex = (activeIndex + 1) % testimonials.length;
   const current = testimonials[activeIndex];
+  const next = testimonials[nextIndex];
+
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    if (deltaX > 40) {
+      handlePrev();
+    } else if (deltaX < -40) {
+      handleNext();
+    }
+    touchStartX.current = null;
+  };
 
   // Auto-advance every 4.2 seconds when not hovered
   useEffect(() => {
@@ -283,14 +302,94 @@ export default function ClientFeedback() {
             </div>
           </div>
 
-          {/* ================= 3. 25% SPOTLIGHT SLIDER CAROUSEL ================= */}
+          {/* ================= 3. MOBILE VIEW: AT MAX 2 IMAGES (1 BIG SPOTLIGHT, 1 SMALL UPCOMING) ================= */}
+          <div 
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="block md:hidden w-full pt-8 pb-4 overflow-hidden"
+          >
+            {/* 2-Card Row: Starts cleanly with px-6, zero cutoff, 1 Big + 1 Small */}
+            <div className="flex items-end gap-4 px-6">
+              {/* BIG SPOTLIGHT CARD: Prominent, enlarged, vibrant color, orange border */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`mobile-big-${current.id}`}
+                  initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, x: -20 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative w-40 h-40 sm:w-44 sm:h-44 border-2 border-brand-orange shadow-2xl flex-shrink-0 bg-zinc-950"
+                  title={`${current.author} — ${current.role}`}
+                >
+                  <div className="relative w-full h-full overflow-hidden">
+                    <Image
+                      src={current.colorImage}
+                      alt={current.author}
+                      fill
+                      sizes="180px"
+                      priority
+                      className="object-cover contrast-115"
+                    />
+                  </div>
+                  {/* Active brutalist indicator */}
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-brand-orange shadow-sm" />
+                </motion.div>
+              </AnimatePresence>
+
+              {/* SMALL UPCOMING CARD: Preview thumbnail that replaces the big one on next turn */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`mobile-next-${next.id}`}
+                  initial={{ opacity: 0, scale: 0.95, x: 15 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, x: -15 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  onClick={handleNext}
+                  className="relative w-24 h-24 sm:w-28 sm:h-28 border border-zinc-300 shadow-sm flex-shrink-0 bg-zinc-950 cursor-pointer group"
+                  title={`Next: ${next.author} — ${next.role}`}
+                >
+                  <div className="relative w-full h-full overflow-hidden">
+                    <Image
+                      src={next.image}
+                      alt={next.author}
+                      fill
+                      sizes="120px"
+                      className="object-cover grayscale opacity-75 group-hover:opacity-100 transition-opacity duration-300"
+                    />
+                  </div>
+                  {/* Brutalist NEXT label */}
+                  <span className="absolute bottom-1 right-1 text-[9px] font-mono uppercase tracking-widest text-white/90 bg-black/70 px-1 py-0.5 pointer-events-none">
+                    NEXT
+                  </span>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Mobile Carousel Indicators (Direct touch / click to jump) */}
+            <div className="flex items-center gap-1.5 px-6 pt-5">
+              {testimonials.map((t, idx) => (
+                <button
+                  key={`dot-${t.id}`}
+                  onClick={() => setGlobalIndex(14 + idx)}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  className={`h-1 transition-all duration-300 ${
+                    idx === activeIndex 
+                      ? 'w-6 bg-brand-orange' 
+                      : 'w-2 bg-zinc-300 hover:bg-zinc-400'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* ================= 4. DESKTOP VIEW: 25% SPOTLIGHT SLIDER CAROUSEL ================= */}
           <div 
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => {
               setIsPaused(false);
               setHoveredIdx(null);
             }}
-            className="w-full pt-10 pb-8 sm:pt-14 sm:pb-10 md:pt-20 md:pb-16 overflow-hidden relative"
+            className="hidden md:block w-full pt-10 pb-8 sm:pt-14 sm:pb-10 md:pt-20 md:pb-16 overflow-hidden relative"
           >
             {/* Sliding Track - Silky smooth glide with zero card bounce */}
             <div 

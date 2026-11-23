@@ -7,14 +7,29 @@ export default function CustomCursor() {
   const [mousePosition, setMousePosition] = useState({ x: -100, y: -100 });
   const [isHovered, setIsHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isMobile, setIsMobile] = useState(true); // default true on SSR/first paint
 
   useEffect(() => {
+    // Check if device is mobile or touch
+    const checkIsMobile = () => {
+      const touchOrSmallScreen =
+        window.innerWidth < 768 ||
+        window.matchMedia('(pointer: coarse)').matches ||
+        'ontouchstart' in window;
+      setIsMobile(touchOrSmallScreen);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+
     const handleMouseMove = (e: MouseEvent) => {
+      if (window.innerWidth < 768) return;
       setMousePosition({ x: e.clientX, y: e.clientY });
       if (!isVisible) setIsVisible(true);
     };
 
     const handleMouseOver = (e: MouseEvent) => {
+      if (window.innerWidth < 768) return;
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'BUTTON' ||
@@ -38,16 +53,18 @@ export default function CustomCursor() {
     document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
+      window.removeEventListener('resize', checkIsMobile);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, [isVisible]);
 
-  if (!isVisible) return null;
+  // Completely disable on mobile and touch screens
+  if (isMobile || !isVisible) return null;
 
   return (
-    <>
+    <div className="hidden md:block pointer-events-none">
       {/* Inner sharp cursor square */}
       <motion.div
         className="fixed top-0 left-0 w-2.5 h-2.5 bg-brand-orange pointer-events-none z-50 mix-blend-difference"
@@ -69,6 +86,6 @@ export default function CustomCursor() {
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 24 }}
       />
-    </>
+    </div>
   );
 }
