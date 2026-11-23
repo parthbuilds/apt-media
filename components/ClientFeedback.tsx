@@ -120,9 +120,7 @@ export default function ClientFeedback() {
   }, []);
 
   const activeIndex = ((globalIndex % testimonials.length) + testimonials.length) % testimonials.length;
-  const nextIndex = (activeIndex + 1) % testimonials.length;
   const current = testimonials[activeIndex];
-  const next = testimonials[nextIndex];
 
   const touchStartX = useRef<number | null>(null);
 
@@ -167,27 +165,27 @@ export default function ClientFeedback() {
     setGlobalIndex((prev) => prev + 1);
   };
 
-  // Geometry: Align the active item directly at the 25% mark on desktop
-  // Ensure generous gap so the expanded spotlight card NEVER overlaps neighboring cards
+  // Geometry:
+  // Desktop (>= 768): w-32 (128px), gap-11 (44px) -> step = 172px. Aligns at 25% mark
+  // Mobile (< 768): w-20 (80px), gap-7 (28px) -> step = 108px. Aligns at 24px (never cut off on left!)
+  // Result on mobile: 4 images visible: 1 BIG (scale 1.32), 3 smaller, and the 4th image half cut off on the right!
   const isDesktop = containerWidth >= 768;
-  const itemWidth = isDesktop ? 128 : 100; // w-32 on desktop, w-24 on mobile
-  const itemGap = isDesktop ? 44 : 16;     // 44px gap on desktop, 16px on mobile
+  const itemWidth = isDesktop ? 128 : 80;
+  const itemGap = isDesktop ? 44 : 28;
   const step = itemWidth + itemGap;
 
-  // On desktop (lg), Column 2 starts at 25% of container width + 20px pop offset
-  // On mobile (< 768), cards stay uniform size (not bigger) with a clean left margin
-  const targetX = containerWidth >= 1024 
-    ? containerWidth * 0.25 + 20 
-    : containerWidth >= 768 
-      ? containerWidth * 0.20 + 10 
-      : 20;
+  const targetX = containerWidth >= 1024
+    ? containerWidth * 0.25 + 20
+    : containerWidth >= 768
+      ? containerWidth * 0.20 + 10
+      : 24;
 
   const trackOffset = targetX - globalIndex * step;
 
   return (
     <section id="feedback" className="relative bg-[#FAFAFA] py-28 px-4 sm:px-6 md:px-12 border-t border-zinc-200 overflow-hidden">
       {/* 4-Column Continuous Architectural Grid Container (Matching Reference) */}
-      <div 
+      <div
         ref={containerRef}
         className="relative max-w-7xl mx-auto border-x border-zinc-200/80"
       >
@@ -302,102 +300,24 @@ export default function ClientFeedback() {
             </div>
           </div>
 
-          {/* ================= 3. MOBILE VIEW: AT MAX 2 IMAGES (1 BIG SPOTLIGHT, 1 SMALL UPCOMING) ================= */}
+          {/* ================= 3. CONTINUOUS SPOTLIGHT SLIDER CAROUSEL (Mobile & Desktop) ================= */}
           <div 
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            className="block md:hidden w-full pt-8 pb-4 overflow-hidden"
-          >
-            {/* 2-Card Row: Starts cleanly with px-6, zero cutoff, 1 Big + 1 Small */}
-            <div className="flex items-end gap-4 px-6">
-              {/* BIG SPOTLIGHT CARD: Prominent, enlarged, vibrant color, orange border */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`mobile-big-${current.id}`}
-                  initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, x: -20 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative w-40 h-40 sm:w-44 sm:h-44 border-2 border-brand-orange shadow-2xl flex-shrink-0 bg-zinc-950"
-                  title={`${current.author} — ${current.role}`}
-                >
-                  <div className="relative w-full h-full overflow-hidden">
-                    <Image
-                      src={current.colorImage}
-                      alt={current.author}
-                      fill
-                      sizes="180px"
-                      priority
-                      className="object-cover contrast-115"
-                    />
-                  </div>
-                  {/* Active brutalist indicator */}
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-brand-orange shadow-sm" />
-                </motion.div>
-              </AnimatePresence>
-
-              {/* SMALL UPCOMING CARD: Preview thumbnail that replaces the big one on next turn */}
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`mobile-next-${next.id}`}
-                  initial={{ opacity: 0, scale: 0.95, x: 15 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, x: -15 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  onClick={handleNext}
-                  className="relative w-24 h-24 sm:w-28 sm:h-28 border border-zinc-300 shadow-sm flex-shrink-0 bg-zinc-950 cursor-pointer group"
-                  title={`Next: ${next.author} — ${next.role}`}
-                >
-                  <div className="relative w-full h-full overflow-hidden">
-                    <Image
-                      src={next.image}
-                      alt={next.author}
-                      fill
-                      sizes="120px"
-                      className="object-cover grayscale opacity-75 group-hover:opacity-100 transition-opacity duration-300"
-                    />
-                  </div>
-                  {/* Brutalist NEXT label */}
-                  <span className="absolute bottom-1 right-1 text-[9px] font-mono uppercase tracking-widest text-white/90 bg-black/70 px-1 py-0.5 pointer-events-none">
-                    NEXT
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Mobile Carousel Indicators (Direct touch / click to jump) */}
-            <div className="flex items-center gap-1.5 px-6 pt-5">
-              {testimonials.map((t, idx) => (
-                <button
-                  key={`dot-${t.id}`}
-                  onClick={() => setGlobalIndex(14 + idx)}
-                  aria-label={`Go to slide ${idx + 1}`}
-                  className={`h-1 transition-all duration-300 ${
-                    idx === activeIndex 
-                      ? 'w-6 bg-brand-orange' 
-                      : 'w-2 bg-zinc-300 hover:bg-zinc-400'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* ================= 4. DESKTOP VIEW: 25% SPOTLIGHT SLIDER CAROUSEL ================= */}
-          <div 
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => {
               setIsPaused(false);
               setHoveredIdx(null);
             }}
-            className="hidden md:block w-full pt-10 pb-8 sm:pt-14 sm:pb-10 md:pt-20 md:pb-16 overflow-hidden relative"
+            className="w-full pt-8 pb-6 sm:pt-14 sm:pb-10 md:pt-20 md:pb-16 overflow-hidden relative"
           >
-            {/* Sliding Track - Silky smooth glide with zero card bounce */}
+            {/* Sliding Track - Silky smooth continuous glide across both mobile and desktop */}
             <div 
               style={{
                 transform: `translateX(${trackOffset}px)`,
                 transition: 'transform 0.85s cubic-bezier(0.22, 1, 0.36, 1)',
               }}
-              className="flex items-end gap-4 md:gap-11 whitespace-nowrap min-w-max will-change-transform"
+              className="flex items-end gap-7 md:gap-11 whitespace-nowrap min-w-max will-change-transform"
             >
               {repeatedTestimonials.map((client, idx) => {
                 const isSpotlight = idx === globalIndex;
@@ -409,15 +329,15 @@ export default function ClientFeedback() {
                     key={`client-slider-${client.id}-${idx}`}
                     onMouseEnter={() => setHoveredIdx(idx)}
                     onClick={() => setGlobalIndex(idx)}
-                    className="relative cursor-pointer flex-shrink-0 flex items-end justify-center w-24 h-24 md:w-32 md:h-32"
+                    className="relative cursor-pointer flex-shrink-0 flex items-end justify-center w-20 h-20 md:w-32 md:h-32"
                     title={`${client.author} — ${client.role}`}
                   >
                     <div
                       className={`relative w-full h-full aspect-square transition-all duration-700 ease-out origin-bottom ${
                         isSpotlight
-                          ? 'border-2 border-brand-orange shadow-2xl z-30 scale-100 md:scale-[1.38] md:translate-x-1'
+                          ? 'border-2 border-brand-orange shadow-2xl z-30 scale-[1.32] md:scale-[1.38] md:translate-x-1'
                           : isHovered
-                            ? 'border-2 border-brand-orange shadow-2xl z-20 scale-100 md:scale-115'
+                            ? 'border-2 border-brand-orange shadow-2xl z-20 scale-105 md:scale-115'
                             : 'border border-zinc-300/80 z-10 scale-100'
                       }`}
                     >
@@ -427,17 +347,17 @@ export default function ClientFeedback() {
                           src={client.image}
                           alt={client.author}
                           fill
-                          sizes="(max-width: 768px) 120px, 240px"
+                          sizes="(max-width: 768px) 110px, 240px"
                           className={`object-cover filter contrast-110 transition-all duration-500 ${
                             isColored ? 'grayscale-0 opacity-100' : 'grayscale opacity-75'
                           }`}
                         />
-                        {/* Amber/Red Duotone Overlay - Blossoms into vibrant color at 25% spotlight or hover */}
+                        {/* Amber/Red Duotone Overlay - Blossoms into vibrant color at spotlight or hover */}
                         <Image
                           src={client.colorImage}
                           alt={client.author}
                           fill
-                          sizes="(max-width: 768px) 120px, 240px"
+                          sizes="(max-width: 768px) 110px, 240px"
                           className={`object-cover contrast-115 transition-opacity duration-500 pointer-events-none ${
                             isColored ? 'opacity-100' : 'opacity-0'
                           }`}
